@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 kvm-bindings = "0.8.1"
-nix = { version = "0.28.0", features = ["fs", "ioctl"] }
+nix = { version = "0.28.0", features = ["fs", "ioctl", "mman"] }
