@@ -20,6 +20,7 @@ fn main() {
     // Open /dev/kvm
     let kvm_fd: OwnedFd = match fcntl::open(KVM_DEVICE, OFlag::O_RDWR, Mode::empty()) {
         Ok(fd) => unsafe {
+            assert!(fd != -1);
             FromRawFd::from_raw_fd(fd)
         },
         Err(errno) => {
@@ -32,6 +33,7 @@ fn main() {
 
     let vm_fd: OwnedFd = match unsafe { kvm_create_vm(kvm_fd.as_raw_fd(), 0) } {
         Ok(fd) => unsafe {
+            assert!(fd != -1);
             FromRawFd::from_raw_fd(fd)
         },
         Err(errno) => {
