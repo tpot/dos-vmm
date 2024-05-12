@@ -112,8 +112,14 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_get_sregs(vcpu_fd.as_raw_fd(), &mut sregs)
         } {
-            Ok(_)      => Ok(sregs),
-            Err(errno) => { Err(std::io::Error::from_raw_os_error(errno as i32)) },
+            Ok(result) => {
+                assert!(result == 0);
+                Ok(sregs)
+            },
+            Err(errno) => {
+                assert!(errno as i32 != 0);
+                Err(std::io::Error::from_raw_os_error(errno as i32))
+            },
         }
     }
 
@@ -122,7 +128,10 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_set_sregs(vcpu_fd.as_raw_fd(), regs)
         } {
-            Ok(_)      => Ok(()),
+            Ok(result) => {
+                assert!(result == 0);
+                Ok(())
+            },
             Err(errno) => {
                 assert!(errno as i32 != 0);
                 Err(std::io::Error::from_raw_os_error(errno as i32))
@@ -136,8 +145,14 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_get_regs(vcpu_fd.as_raw_fd(), &mut regs)
         } {
-            Ok(_)      => Ok(regs),
-            Err(errno) => Err(std::io::Error::from_raw_os_error(errno as i32)),
+            Ok(result) => {
+                assert!(result == 0);
+                Ok(regs)
+            },
+            Err(errno) => {
+                assert!(errno as i32 != 0);
+                Err(std::io::Error::from_raw_os_error(errno as i32))
+            },
         }
     }
 
@@ -146,8 +161,14 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_set_regs(vcpu_fd.as_raw_fd(), regs)
         } {
-            Ok(_)      => Ok(()),
-            Err(errno) => Err(std::io::Error::from_raw_os_error(errno as i32)),
+            Ok(result) => {
+                assert!(result == 0);
+                Ok(())
+            },
+            Err(errno) => {
+                assert!(errno as i32 != 0);
+                Err(std::io::Error::from_raw_os_error(errno as i32))
+            },
         }
     }
 
@@ -156,7 +177,10 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_run(vcpu_fd.as_raw_fd(), 0)
         } {
-            Ok(_)      => Ok(()),
+            Ok(result) => {
+                assert!(result == 0);
+                Ok(())
+            },
             Err(errno) => {
                 assert!(errno as i32 != 0);
                 Err(std::io::Error::from_raw_os_error(errno as i32))
