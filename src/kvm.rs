@@ -42,19 +42,17 @@ impl Kvm {
         match fcntl::open(KVM_DEVICE, OFlag::O_RDWR, Mode::empty()) {
             Ok(fd) => unsafe {
                 assert!(fd != -1);
-                return Ok(Kvm{
+                Ok(Kvm{
                     fd: FromRawFd::from_raw_fd(fd),
                     vm_fd: None,
                     vcpu_fd: None,
-                });
+                })
             },
             Err(errno) => {
                 assert!(errno as i32 != 0);
-                return Err(
-                    std::io::Error::from_raw_os_error(errno as i32)
-                );
+                Err(std::io::Error::from_raw_os_error(errno as i32))
             },
-        };
+        }
     }
 
     pub fn create_vm(&mut self) -> Result<(), std::io::Error> {
@@ -68,9 +66,7 @@ impl Kvm {
             },
             Err(errno) => {
                 assert!(errno as i32 != 0);
-                return Err(
-                    std::io::Error::from_raw_os_error(errno as i32)
-                );
+                return Err(std::io::Error::from_raw_os_error(errno as i32));
             },
         };
 
@@ -82,35 +78,31 @@ impl Kvm {
             Ok(fd) => unsafe {
                 assert!(fd != -1);
                 self.vcpu_fd = Some(FromRawFd::from_raw_fd(fd));
+                Ok(())
             },
             Err(errno) => {
                 assert!(errno as i32 != 0);
-                return Err(
-                    std::io::Error::from_raw_os_error(errno as i32)
-                );
+                Err(std::io::Error::from_raw_os_error(errno as i32))
             },
         }
-        return Ok(());
     }
 
     // Find size of the shared `kvm_run` mapping
     pub fn mmap_size(&self) -> Result<NonZeroUsize, std::io::Error> {
-        let mmap_size = match unsafe {
-             kvm_get_vcpu_mmap_size(self.fd.as_raw_fd(), 0)
+        match unsafe {
+            kvm_get_vcpu_mmap_size(self.fd.as_raw_fd(), 0)
         } {
             Ok(result) => {
-                NonZeroUsize::new(
-                    result.try_into().expect("mmap_size too big for usize!"))
-                .expect("mmap_size is zero")
+                Ok(
+                    NonZeroUsize::new(
+                        result.try_into().expect("mmap_size too big for usize!"))
+                    .expect("mmap_size is zero"))
             },
             Err(errno) => {
                 assert!(errno as i32 != 0);
-                return Err(
-                    std::io::Error::from_raw_os_error(errno as i32)
-                );
+                Err(std::io::Error::from_raw_os_error(errno as i32))
             },
-        };
-        return Ok(mmap_size);
+        }
     }
 
     pub fn get_vcpu_sregs(&self) -> Result<kvm_sregs, std::io::Error> {
@@ -119,14 +111,9 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_get_sregs(vcpu_fd.as_raw_fd(), &mut sregs)
         } {
-            Ok(_) => {},
-            Err(errno) => {
-                return Err(
-                    std::io::Error::from_raw_os_error(errno as i32)
-                );
-            },
-        };
-        Ok(sregs)
+            Ok(_)      => Ok(sregs),
+            Err(errno) => { Err(std::io::Error::from_raw_os_error(errno as i32)) },
+        }
     }
 
     pub fn set_vcpu_sregs(&self, regs: *const kvm_sregs) -> Result<(), std::io::Error> {
@@ -134,12 +121,12 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_set_sregs(vcpu_fd.as_raw_fd(), regs)
         } {
-            Ok(_) => {}
+            Ok(_)      => Ok(()),
             Err(errno) => {
-                return Err(std::io::Error::from_raw_os_error(errno as i32));
+                assert!(errno as i32 != 0);
+                Err(std::io::Error::from_raw_os_error(errno as i32))
             },
-        };
-        Ok(())
+        }
     }
 
     pub fn get_vcpu_regs(&self) -> Result<kvm_regs, std::io::Error> {
@@ -168,14 +155,11 @@ impl Kvm {
             let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
             kvm_run(vcpu_fd.as_raw_fd(), 0)
         } {
-            Ok(_) => {},
+            Ok(_)      => Ok(()),
             Err(errno) => {
                 assert!(errno as i32 != 0);
-                return Err(
-                    std::io::Error::from_raw_os_error(errno as i32)
-                );
+                Err(std::io::Error::from_raw_os_error(errno as i32))
             },
-        };
-        return Ok(());
+        }
     }
 }
