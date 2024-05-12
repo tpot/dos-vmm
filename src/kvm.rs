@@ -78,13 +78,14 @@ impl Kvm {
             Ok(fd) => unsafe {
                 assert!(fd != -1);
                 self.vcpu_fd = Some(FromRawFd::from_raw_fd(fd));
-                Ok(())
             },
             Err(errno) => {
                 assert!(errno as i32 != 0);
-                Err(std::io::Error::from_raw_os_error(errno as i32))
+                return Err(std::io::Error::from_raw_os_error(errno as i32));
             },
-        }
+        };
+
+        return Ok(());
     }
 
     // Find size of the shared `kvm_run` mapping
