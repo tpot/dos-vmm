@@ -35,6 +35,12 @@ fn main() {
         }
     };
 
+    let mut sregs = k.get_vcpu_sregs().expect("get_vcpu_sregs()");
+    sregs.cs.base = 0;
+    sregs.cs.selector = 0;
+
+    k.set_vcpu_sregs(&sregs).expect("set_vcpu_sregs()");
+
     k.run().expect("kvm_run");
 
     println!("Success!");

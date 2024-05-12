@@ -4,11 +4,15 @@ use nix::{
     fcntl,
     fcntl::OFlag,
     sys::stat::Mode,
+    ioctl_read,
     ioctl_write_int_bad,
+    ioctl_write_ptr,
     request_code_none,
 };
 
 use kvm_bindings::{
+    kvm_regs,
+    kvm_sregs,
     KVMIO,
 };
 
@@ -25,6 +29,10 @@ const KVM_DEVICE: &str = "/dev/kvm";
 ioctl_write_int_bad!(kvm_create_vm, request_code_none!(KVMIO, 0x01));
 ioctl_write_int_bad!(kvm_create_vcpu, request_code_none!(KVMIO, 0x41));
 ioctl_write_int_bad!(kvm_get_vcpu_mmap_size, request_code_none!(KVMIO, 0x04));
+ioctl_read!(kvm_get_regs, KVMIO, 0x81, kvm_regs);
+ioctl_write_ptr!(kvm_set_regs, KVMIO, 0x82, kvm_regs);
+ioctl_read!(kvm_get_sregs, KVMIO, 0x83, kvm_sregs);
+ioctl_write_ptr!(kvm_set_sregs, KVMIO, 0x84, kvm_sregs);
 ioctl_write_int_bad!(kvm_run, request_code_none!(KVMIO, 0x80));
 
 impl Kvm {
@@ -103,6 +111,56 @@ impl Kvm {
             },
         };
         return Ok(mmap_size);
+    }
+
+    pub fn get_vcpu_sregs(&self) -> Result<kvm_sregs, std::io::Error> {
+        let mut sregs = kvm_sregs::default();
+        match unsafe {
+            let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
+            kvm_get_sregs(vcpu_fd.as_raw_fd(), &mut sregs)
+        } {
+            Ok(_) => {},
+            Err(errno) => {
+                return Err(
+                    std::io::Error::from_raw_os_error(errno as i32)
+                );
+            },
+        };
+        Ok(sregs)
+    }
+
+    pub fn set_vcpu_sregs(&self, regs: *const kvm_sregs) -> Result<(), std::io::Error> {
+        match unsafe {
+            let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
+            kvm_set_sregs(vcpu_fd.as_raw_fd(), regs)
+        } {
+            Ok(_) => {}
+            Err(errno) => {
+                return Err(std::io::Error::from_raw_os_error(errno as i32));
+            },
+        };
+        Ok(())
+    }
+
+    pub fn get_vcpu_regs(&self) -> Result<kvm_regs, std::io::Error> {
+        let mut regs = kvm_regs::default();
+        match unsafe {
+            let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
+            kvm_get_regs(vcpu_fd.as_raw_fd(), &mut regs)
+        } {
+            Ok(_)      => Ok(regs),
+            Err(errno) => Err(std::io::Error::from_raw_os_error(errno as i32)),
+        }
+    }
+
+    pub fn set_vcpu_regs(&self, regs: *const kvm_regs) -> Result<(), std::io::Error> {
+        match unsafe {
+            let vcpu_fd = self.vcpu_fd.as_ref().unwrap();
+            kvm_set_regs(vcpu_fd.as_raw_fd(), regs)
+        } {
+            Ok(_)      => Ok(()),
+            Err(errno) => Err(std::io::Error::from_raw_os_error(errno as i32)),
+        }
     }
 
     pub fn run(&self) -> Result<(), std::io::Error> {
